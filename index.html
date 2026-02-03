@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MEK Space — Infinite Wallpaper</title>
+  <style>
+    :root{
+      --bg:#050815;
+      --panel: rgba(255,255,255,.08);
+      --border: rgba(255,255,255,.14);
+      --txt:#eaf0ff;
+      --muted:#a9b7da;
+      --accent:#7aa2ff;
+      --shadow: 0 18px 45px rgba(0,0,0,.25);
+    }
+    html,body{ height:100%; margin:0; background:var(--bg); overflow:hidden; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+    canvas{ display:block; width:100vw; height:100vh; cursor: crosshair; }
+
+    .ui{
+      position:fixed;
+      top:14px; left:14px;
+      background: linear-gradient(180deg, var(--panel), rgba(255,255,255,.04));
+      border:1px solid var(--border);
+      border-radius:16px;
+      color:var(--txt);
+      padding:12px 12px;
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      width: min(420px, calc(100vw - 28px));
+      user-select:none;
+      z-index: 5;
+    }
+    .row{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .title{ font-weight:900; letter-spacing:.2px; }
+    .sub{ font-size:12px; color:var(--muted); margin-top:4px; line-height:1.35; }
+    .controls{ margin-top:10px; display:grid; gap:10px; }
+
+    .ctrl{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      border:1px dashed rgba(255,255,255,.16);
+      border-radius:14px;
+      padding:10px;
+    }
+    .ctrl label{ font-size:12px; font-weight:900; color:var(--txt); }
+    .ctrl small{ display:block; color:var(--muted); font-weight:800; margin-top:2px; font-size:11px;}
+    input[type="range"]{ width:170px; max-width:48vw; accent-color: var(--accent); }
+    input[type="checkbox"]{ width:18px; height:18px; accent-color: var(--accent); cursor:pointer; }
+    input[type="text"]{
+      width:150px; max-width:100%;
+      padding:8px 10px; border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.20);
+      color:var(--txt); outline:none; font-weight:900;
+    }
+    select{
+      width: 170px; max-width:48vw;
+      padding:8px 10px; border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.20);
+      color:var(--txt); outline:none; font-weight:900;
+      cursor:pointer;
+    }
+    .btn{
+      appearance:none; border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+      color:var(--txt); border-radius:12px;
+      padding:8px 10px; font-weight:900; cursor:pointer;
+      transition: transform .06s ease, filter .15s ease;
+      white-space:nowrap;
+    }
+    .btn:hover{ filter: brightness(1.08); }
+    .btn:active{ transform: translateY(1px) scale(.99); }
+    .btn.accent{ border-color: rgba(122,162,255,.35); }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.15);
+      color:var(--muted); font-size:12px; font-weight:900;
+    }
+    .hint{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+    }
+    kbd{
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      padding:2px 6px;
+      border-radius:8px;
+      font-size:12px;
+      color:var(--txt);
+    }
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.55);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow: var(--shadow);
+      font-weight:900;
+      font-size:13px;
+      opacity: 0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      z-index: 6;
+    }
+    .toast.show{ opacity: 1; transform: translateX(-50%) translateY(-2px); }
+    .min{ font-size:11px; color:var(--muted); font-weight:900; }
+    .hide-ui{ position:fixed; right:14px; top:14px; z-index: 6; }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.16);
+      color: var(--txt);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .dot{
+      width:9px; height:9px; border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 5px rgba(122,162,255,.15);
+    }
+
+    /* small helper so UI clicks don't place planets */
+    .ui, .hide-ui { pointer-events: auto; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <button class="btn hide-ui" id="toggleUI" title="UI gizle/göster (H)">UI</button>
+
+  <div class="ui" id="ui">
+    <div class="row">
+      <div>
+        <div class="row" style="gap:8px; justify-content:flex-start;">
+          <span class="badge"><span class="dot"></span> MEK Space Wallpaper</span>
+          <span class="pill">Seed: <b id="seedLabel"></b></span>
+        </div>
+        <div class="sub">Fareyle ittir · Tıkla → gezegen bırak · İndir → PNG/4K</div>
+      </div>
+      <div class="row" style="gap:8px">
+        <button class="btn accent" id="newSeed" title="Yeni seed (N)">Yeni Seed</button>
+        <button class="btn" id="copyLink" title="Linki kopyala (C)">Link</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="ctrl">
+        <div>
+          <label>Tema</label>
+          <small>Renk paleti</small>
+        </div>
+        <select id="theme">
+          <option value="aurora">Aurora (mavi/yeşil)</option>
+          <option value="nebula">Nebula (mor/pembe)</option>
+          <option value="neon">Neon (turkuaz)</option>
+          <option value="sunset">Sunset (turuncu)</option>
+          <option value="mono">Mono (soğuk)</option>
+        </select>
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>Mod</label>
+          <small>Calm / Normal / Hyperspace</small>
+        </div>
+        <select id="mode">
+          <option value="calm">Calm</option>
+          <option value="normal" selected>Normal</option>
+          <option value="hyper">Hyperspace</option>
+        </select>
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>Yıldız yoğunluğu</label>
+          <small>Performans ↔ görsellik</small>
+        </div>
+        <input type="range" id="density" min="200" max="2200" step="50" />
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>Hız</label>
+          <small>Akış kuvveti</small>
+        </div>
+        <input type="range" id="speed" min="0.2" max="3.5" step="0.1" />
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>Trail</label>
+          <small>İz (düşük = daha çok iz)</small>
+        </div>
+        <input type="range" id="trail" min="0.02" max="0.24" step="0.01" />
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>Parallax</label>
+          <small>Derinlik hissi</small>
+        </div>
+        <input type="range" id="parallax" min="0.4" max="2.2" step="0.1" />
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>Meteorlar</label>
+          <small>Arada kayan yıldız</small>
+        </div>
+        <input type="checkbox" id="meteors" />
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>Ambience</label>
+          <small>Uzay sesi + görselizer</small>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+          <button class="btn" id="audioToggle" title="Sesi aç/kapat">Ses Aç</button>
+          <label style="display:flex; gap:8px; align-items:center; font-size:12px; font-weight:900;">
+            <input type="checkbox" id="vizToggle" />
+            Viz
+          </label>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>Ses seviyesi</label>
+          <small>Ambience volume</small>
+        </div>
+        <input type="range" id="volume" min="0" max="1" step="0.01" />
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>İndir</label>
+          <small>PNG veya 4K</small>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+          <label style="display:flex; gap:8px; align-items:center; font-size:12px; font-weight:900;">
+            <input type="checkbox" id="dl4k" />
+            4K
+          </label>
+          <button class="btn accent" id="downloadBtn">PNG İndir</button>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <div>
+          <label>Seed</label>
+          <small>Enter → uygula</small>
+        </div>
+        <input type="text" id="seedInput" placeholder="örn: 12345" />
+      </div>
+    </div>
+
+    <div class="hint">
+      Kısayollar:
+      <kbd>H</kbd> UI · <kbd>N</kbd> yeni seed · <kbd>M</kbd> meteor · <kbd>C</kbd> link ·
+      <kbd>P</kbd> PNG · <kbd>4</kbd> 4K indir · <kbd>A</kbd> ses · <kbd>V</kbd> viz · <kbd>Del</kbd> gezegen temizle
+    </div>
+    <div class="min">İpucu: URL’ye <b>?seed=123</b> yazarsan aynı sahne açılır.</div>
+  </div>
+
+  <div class="toast" id="toast">Kopyalandı ✅</div>
+
+<script>
+(() => {
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("c");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  const ui = $("ui");
+  const toggleUIBtn = $("toggleUI");
+
+  const themeEl = $("theme");
+  const modeEl = $("mode");
+  const densityEl = $("density");
+  const speedEl = $("speed");
+  const trailEl = $("trail");
+  const parallaxEl = $("parallax");
+  const meteorsEl = $("meteors");
+
+  const audioToggleBtn = $("audioToggle");
+  const vizToggleEl = $("vizToggle");
+  const volumeEl = $("volume");
+
+  const dl4kEl = $("dl4k");
+  const downloadBtn = $("downloadBtn");
+
+  const seedInput = $("seedInput");
+  const seedLabel = $("seedLabel");
+  const newSeedBtn = $("newSeed");
+  const copyLinkBtn = $("copyLink");
+
+  const toastEl = $("toast");
+  let toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>toastEl.classList.remove("show"), 1200);
+  }
+
+  // ---------- Seed RNG ----------
+  function mulberry32(seed){
+    let t = seed >>> 0;
+    return function(){
+      t += 0x6D2B79F5;
+      let r = Math.imul(t ^ (t >>> 15), 1 | t);
+      r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hashToSeed(str){
+    let h = 2166136261 >>> 0;
+    for (let i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function getSeedFromURL(){
+    const u = new URL(location.href);
+    const s = u.searchParams.get("seed");
+    if (!s) return null;
+    const asNum = Number(s);
+    if (Number.isFinite(asNum) && asNum >= 0) return (asNum >>> 0);
+    return hashToSeed(String(s));
+  }
+  function setSeedInURL(seed){
+    const u = new URL(location.href);
+    u.searchParams.set("seed", String(seed >>> 0));
+    history.replaceState(null, "", u.toString());
+  }
+  function randomSeed(){
+    const a = new Uint32Array(1);
+    if (crypto && crypto.getRandomValues) crypto.getRandomValues(a);
+    else a[0] = Math.floor(Math.random() * 2**32);
+    return a[0] >>> 0;
+  }
+
+  // ---------- Themes ----------
+  const THEMES = {
+    aurora: { bg:"#050815", accent:"#7aa2ff", nebulaHueA:[200, 70], nebulaHueB:[150, 60], starHue:[200, 60], meteorHue:210 },
+    nebula: { bg:"#060512", accent:"#b38bff", nebulaHueA:[280, 60], nebulaHueB:[330, 45], starHue:[260, 70], meteorHue:290 },
+    neon:   { bg:"#030912", accent:"#00ffd5", nebulaHueA:[175, 55], nebulaHueB:[205, 50], starHue:[185, 60], meteorHue:185 },
+    sunset: { bg:"#0b0612", accent:"#ff9f4a", nebulaHueA:[20, 55],  nebulaHueB:[330, 45], starHue:[35, 55],  meteorHue:25 },
+    mono:   { bg:"#05070d", accent:"#9fb3d9", nebulaHueA:[210, 30], nebulaHueB:[240, 25], starHue:[210, 25], meteorHue:210 }
+  };
+
+  function setCSSAccent(hex){
+    document.documentElement.style.setProperty("--accent", hex);
+  }
+  function setCSSBG(hex){
+    document.documentElement.style.setProperty("--bg", hex);
+    document.body.style.background = hex;
+  }
+
+  // ---------- State ----------
+  let W = 0, H = 0, DPR = 1;
+  let rng = mulberry32(12345);
+
+  let config = {
+    theme: "aurora",
+    mode: "normal", // calm | normal | hyper
+    density: 900,
+    speed: 1.2,
+    trail: 0.08,
+    parallax: 1.1,
+    meteors: true,
+
+    audioOn: false,
+    vizOn: false,
+    volume: 0.22
+  };
+
+  // stars: store normalized coords for easy export
+  let stars = [];
+  let meteors = [];
+  let planets = [];
+  let time = 0;
+
+  const mouse = { x: 0, y: 0 };
+
+  // ---------- Resize ----------
+  function resize(){
+    DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    W = Math.floor(window.innerWidth);
+    H = Math.floor(window.innerHeight);
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener("resize", () => {
+    resize();
+  });
+
+  // ---------- Scene Builders ----------
+  function makeStar(){
+    // depth skew (more far stars)
+    const z = Math.pow(rng(), 2.2) * config.parallax + 0.05;
+    const r = (0.6 + rng() * 1.9) * (0.35 + z);
+    const base = 0.25 + rng() * 0.75;
+    const tw = rng() * 2.0 + 0.5;
+    const theme = THEMES[config.theme];
+    const hue = theme.starHue[0] + rng() * theme.starHue[1];
+    return {
+      nx: rng(), ny: rng(),
+      x: 0, y: 0,
+      px: 0, py: 0, // for hyperspace streaks
+      z, r, base, tw, hue,
+      phase: rng() * Math.PI * 2
+    };
+  }
+
+  function rebuildStars(){
+    stars = [];
+    const count = Math.round(config.density);
+    for (let i=0;i<count;i++){
+      const s = makeStar();
+      s.x = s.nx * W;
+      s.y = s.ny * H;
+      s.px = s.x; s.py = s.y;
+      stars.push(s);
+    }
+  }
+
+  function drawNebula(targetCtx, w, h){
+    const theme = THEMES[config.theme];
+    const blobs = 6;
+    for (let i=0;i<blobs;i++){
+      const x = rng() * w;
+      const y = rng() * h;
+      const rad = 240 + rng() * 560;
+      const a = 0.05 + rng() * 0.09;
+      const hueA = theme.nebulaHueA[0] + rng() * theme.nebulaHueA[1];
+      const hueB = theme.nebulaHueB[0] + rng() * theme.nebulaHueB[1];
+      const g = targetCtx.createRadialGradient(x, y, 0, x, y, rad);
+      g.addColorStop(0, `hsla(${hueA}, 92%, 65%, ${a})`);
+      g.addColorStop(0.55, `hsla(${hueB}, 92%, 55%, ${a*0.55})`);
+      g.addColorStop(1, `hsla(${hueB}, 92%, 55%, 0)`);
+      targetCtx.fillStyle = g;
+      targetCtx.beginPath();
+      targetCtx.arc(x, y, rad, 0, Math.PI*2);
+      targetCtx.fill();
+    }
+  }
+
+  function clearBackground(targetCtx, w, h){
+    const theme = THEMES[config.theme];
+    targetCtx.fillStyle = theme.bg;
+    targetCtx.fillRect(0,0,w,h);
+  }
+
+  // ---------- Meteors ----------
+  function spawnMeteor(){
+    const edge = rng();
+    let x, y;
+    if (edge < 0.5){ x = rng() * W; y = -40; }
+    else { x = W + 40; y = rng() * H * 0.55; }
+    const ang = (Math.PI * 0.65) + rng() * 0.35; // down-left
+    const spd = 10 + rng() * 16;
+    const len = 180 + rng() * 260;
+    return { x, y, vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd, len, life: 1.0 };
+  }
+
+  function drawMeteor(targetCtx, m){
+    const theme = THEMES[config.theme];
+    const tx = m.x - m.vx * (m.len / 12);
+    const ty = m.y - m.vy * (m.len / 12);
+    const grd = targetCtx.createLinearGradient(m.x, m.y, tx, ty);
+    grd.addColorStop(0, `rgba(255,255,255,${0.85*m.life})`);
+    grd.addColorStop(0.25, `hsla(${theme.meteorHue}, 100%, 70%, ${0.55*m.life})`);
+    grd.addColorStop(1, `rgba(0,0,0,0)`);
+    targetCtx.strokeStyle = grd;
+    targetCtx.lineWidth = 2.2;
+    targetCtx.lineCap = "round";
+    targetCtx.beginPath();
+    targetCtx.moveTo(m.x, m.y);
+    targetCtx.lineTo(tx, ty);
+    targetCtx.stroke();
+  }
+
+  // ---------- Planets ----------
+  function makePlanet(x, y){
+    // normalized for export
+    const nx = x / Math.max(1, W);
+    const ny = y / Math.max(1, H);
+
+    const theme = THEMES[config.theme];
+    const hue = (theme.nebulaHueA[0] + rng()*theme.nebulaHueA[1] + 40) % 360;
+    const radius = 18 + rng() * 55;
+    const ring = rng() < 0.35;
+    const drift = (rng() * 0.7 + 0.15); // slow
+    const dir = rng() < 0.5 ? -1 : 1;
+    const wob = rng() * Math.PI * 2;
+    return {
+      nx, ny,
+      x, y,
+      r: radius,
+      hue,
+      sat: 65 + rng()*25,
+      lit: 50 + rng()*18,
+      ring,
+      drift: drift * dir,
+      wob,
+      life: 1.0
+    };
+  }
+
+  function drawPlanet(targetCtx, p, w, h){
+    const x = p.nx * w;
+    const y = p.ny * h;
+    const r = p.r * (w / W); // keep proportional if exporting bigger
+
+    // body gradient
+    const g = targetCtx.createRadialGradient(x - r*0.35, y - r*0.35, r*0.2, x, y, r);
+    g.addColorStop(0, `hsla(${p.hue}, ${p.sat}%, ${Math.min(85, p.lit+25)}%, 0.95)`);
+    g.addColorStop(0.55, `hsla(${p.hue+20}, ${p.sat}%, ${p.lit}%, 0.88)`);
+    g.addColorStop(1, `hsla(${p.hue+35}, ${p.sat}%, ${Math.max(18, p.lit-22)}%, 0.78)`);
+
+    targetCtx.beginPath();
+    targetCtx.fillStyle = g;
+    targetCtx.arc(x, y, r, 0, Math.PI*2);
+    targetCtx.fill();
+
+    // subtle texture stripes
+    targetCtx.save();
+    targetCtx.beginPath();
+    targetCtx.arc(x, y, r, 0, Math.PI*2);
+    targetCtx.clip();
+    targetCtx.globalAlpha = 0.14;
+    targetCtx.strokeStyle = `hsla(${p.hue+60}, 90%, 80%, 0.6)`;
+    targetCtx.lineWidth = Math.max(1, r*0.08);
+    for (let i=-3;i<=3;i++){
+      targetCtx.beginPath();
+      targetCtx.moveTo(x - r*1.2, y + i*r*0.22);
+      targetCtx.lineTo(x + r*1.2, y + i*r*0.22);
+      targetCtx.stroke();
+    }
+    targetCtx.restore();
+
+    // rim light
+    targetCtx.beginPath();
+    targetCtx.strokeStyle = `rgba(255,255,255,0.22)`;
+    targetCtx.lineWidth = Math.max(1, r*0.08);
+    targetCtx.arc(x, y, r*0.92, 0, Math.PI*2);
+    targetCtx.stroke();
+
+    // ring
+    if (p.ring){
+      targetCtx.save();
+      targetCtx.translate(x, y);
+      targetCtx.rotate(-0.55);
+      targetCtx.scale(1.3, 0.55);
+      targetCtx.globalAlpha = 0.22;
+      targetCtx.strokeStyle = `hsla(${p.hue+25}, 90%, 75%, 0.75)`;
+      targetCtx.lineWidth = Math.max(1, r*0.18);
+      targetCtx.beginPath();
+      targetCtx.arc(0, 0, r*0.95, 0, Math.PI*2);
+      targetCtx.stroke();
+      targetCtx.globalAlpha = 0.12;
+      targetCtx.strokeStyle = `rgba(255,255,255,0.7)`;
+      targetCtx.lineWidth = Math.max(1, r*0.09);
+      targetCtx.beginPath();
+      targetCtx.arc(0, 0, r*1.12, 0, Math.PI*2);
+      targetCtx.stroke();
+      targetCtx.restore();
+    }
+  }
+
+  function clearPlanets(){
+    planets = [];
+    toast("Gezegenler temizlendi");
+  }
+
+  // ---------- Audio + Visualizer ----------
+  let audio = {
+    ctx: null,
+    master: null,
+    analyser: null,
+    noiseSrc: null,
+    osc1: null,
+    osc2: null,
+    lpf: null
+  };
+
+  function createNoiseBuffer(ac, seconds=2){
+    const buffer = ac.createBuffer(1, ac.sampleRate*seconds, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<data.length;i++){
+      // brown-ish noise
+      data[i] = (Math.random()*2-1) * 0.35;
+    }
+    return buffer;
+  }
+
+  function ensureAudio(){
+    if (audio.ctx) return;
+
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const master = ac.createGain();
+    master.gain.value = config.volume;
+
+    const analyser = ac.createAnalyser();
+    analyser.fftSize = 1024;
+
+    // Noise -> Lowpass -> Master
+    const noiseBuffer = createNoiseBuffer(ac, 2);
+    const noise = ac.createBufferSource();
+    noise.buffer = noiseBuffer;
+    noise.loop = true;
+
+    const lpf = ac.createBiquadFilter();
+    lpf.type = "lowpass";
+    lpf.frequency.value = 520;
+    lpf.Q.value = 0.8;
+
+    // Two slow drones
+    const osc1 = ac.createOscillator();
+    osc1.type = "sine";
+    osc1.frequency.value = 62;
+
+    const osc2 = ac.createOscillator();
+    osc2.type = "triangle";
+    osc2.frequency.value = 92;
+
+    const droneGain = ac.createGain();
+    droneGain.gain.value = 0.08;
+
+    const noiseGain = ac.createGain();
+    noiseGain.gain.value = 0.14;
+
+    // gentle LFO to filter
+    const lfo = ac.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.value = 0.06;
+    const lfoGain = ac.createGain();
+    lfoGain.gain.value = 220;
+    lfo.connect(lfoGain).connect(lpf.frequency);
+
+    noise.connect(noiseGain).connect(lpf);
+    osc1.connect(droneGain);
+    osc2.connect(droneGain);
+
+    lpf.connect(master);
+    droneGain.connect(master);
+
+    master.connect(analyser);
+    analyser.connect(ac.destination);
+
+    noise.start();
+    osc1.start();
+    osc2.start();
+    lfo.start();
+
+    audio.ctx = ac;
+    audio.master = master;
+    audio.analyser = analyser;
+    audio.noiseSrc = noise;
+    audio.osc1 = osc1;
+    audio.osc2 = osc2;
+    audio.lpf = lpf;
+
+    // start muted until user toggles on
+    master.gain.value = 0;
+  }
+
+  async function toggleAudio(){
+    ensureAudio();
+    const ac = audio.ctx;
+
+    if (ac.state === "suspended") {
+      try { await ac.resume(); } catch {}
+    }
+
+    config.audioOn = !config.audioOn;
+    if (config.audioOn){
+      audio.master.gain.value = config.volume;
+      audioToggleBtn.textContent = "Ses Kapat";
+      toast("Ses açıldı");
+    } else {
+      audio.master.gain.value = 0;
+      audioToggleBtn.textContent = "Ses Aç";
+      toast("Ses kapandı");
+    }
+  }
+
+  function getBassLevel(){
+    if (!audio.analyser || !config.audioOn || !config.vizOn) return 0;
+    const a = audio.analyser;
+    const buf = new Uint8Array(a.frequencyBinCount);
+    a.getByteFrequencyData(buf);
+    // bass bins ~ 0..40
+    let sum = 0;
+    const n = Math.min(40, buf.length);
+    for (let i=0;i<n;i++) sum += buf[i];
+    const avg = sum / Math.max(1, n);
+    return avg / 255; // 0..1
+  }
+
+  // ---------- Controls / UI ----------
+  function applyUI(){
+    themeEl.value = config.theme;
+    modeEl.value = config.mode;
+
+    densityEl.value = String(config.density);
+    speedEl.value = String(config.speed);
+    trailEl.value = String(config.trail);
+    parallaxEl.value = String(config.parallax);
+    meteorsEl.checked = !!config.meteors;
+
+    vizToggleEl.checked = !!config.vizOn;
+    volumeEl.value = String(config.volume);
+    audioToggleBtn.textContent = config.audioOn ? "Ses Kapat" : "Ses Aç";
+  }
+
+  function setTheme(name){
+    if (!THEMES[name]) return;
+    config.theme = name;
+    setCSSAccent(THEMES[name].accent);
+    setCSSBG(THEMES[name].bg);
+
+    // rebuild background-ish by reseeding nebula draw (keep seed stable)
+    rebuildStars();
+    // keep planets but recolor slightly (optional)
+    for (const p of planets){
+      p.hue = (THEMES[name].nebulaHueA[0] + rng()*THEMES[name].nebulaHueA[1] + 40) % 360;
+    }
+    toast("Tema: " + name);
+  }
+
+  function setMode(m){
+    config.mode = m;
+    toast("Mod: " + m);
+  }
+
+  // ---------- Clipboard ----------
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      toast("Kopyalandı ✅");
+    }catch{
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      toast("Kopyalandı ✅");
+    }
+  }
+
+  // ---------- Seed ----------
+  function setSeed(seed){
+    rng = mulberry32(seed >>> 0);
+    setSeedInURL(seed);
+    seedLabel.textContent = String(seed >>> 0);
+
+    // reset transient things
+    meteors.length = 0;
+    planets = []; // new seed = new universe (istersen tutabiliriz ama daha temiz)
+    rebuildStars();
+    // Paint a clean starting frame
+    clearBackground(ctx, W, H);
+    drawNebula(ctx, W, H);
+  }
+
+  // ---------- Rendering ----------
+  function vignette(targetCtx, w, h){
+    const vg = targetCtx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.12, w*0.5, h*0.5, Math.max(w,h)*0.78);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,0.35)");
+    targetCtx.fillStyle = vg;
+    targetCtx.fillRect(0,0,w,h);
+  }
+
+  function drawStarsAndEffects(targetCtx, w, h, dt, bass=0, exportMode=false){
+    const cx = w * 0.5, cy = h * 0.5;
+    const dx = (mouse.x - (W*0.5)) / Math.max(1, W); // mouse in screen space
+    const dy = (mouse.y - (H*0.5)) / Math.max(1, H);
+
+    // Mode multipliers
+    const mode = config.mode;
+    const modeSpeed = (mode === "calm") ? 0.55 : (mode === "hyper" ? 2.25 : 1.0);
+    const hyperStreaks = (mode === "hyper");
+
+    // Base "wind"
+    const windX = dx * 38 * config.speed * modeSpeed;
+    const windY = dy * 38 * config.speed * modeSpeed;
+
+    const pulse = 1 + (bass * 0.55); // visualizer affects glow
+
+    for (const s of stars){
+      // On export, use normalized to place without moving
+      if (!exportMode){
+        s.px = s.x; s.py = s.y;
+        const z = Math.max(0.08, s.z);
+        s.x += (windX * z) + (0.12 * z * config.speed * modeSpeed);
+        s.y += (windY * z) + (0.04 * z * config.speed * modeSpeed);
+
+        // wrap and update normalized
+        if (s.x < -10) s.x = W + 10;
+        if (s.x > W + 10) s.x = -10;
+        if (s.y < -10) s.y = H + 10;
+        if (s.y > H + 10) s.y = -10;
+
+        s.nx = s.x / Math.max(1, W);
+        s.ny = s.y / Math.max(1, H);
+      }
+
+      // draw position for target size
+      const x = s.nx * w;
+      const y = s.ny * h;
+
+      const tw = s.base + 0.25 * Math.sin(time * s.tw + s.phase);
+      const alpha = Math.max(0.08, Math.min(1, tw));
+
+      // Glow + core
+      targetCtx.beginPath();
+      targetCtx.fillStyle = `hsla(${s.hue}, 100%, 85%, ${alpha*0.62*pulse})`;
+      targetCtx.arc(x, y, s.r * 1.9, 0, Math.PI*2);
+      targetCtx.fill();
+
+      targetCtx.beginPath();
+      targetCtx.fillStyle = `rgba(255,255,255,${alpha*pulse})`;
+      targetCtx.arc(x, y, s.r, 0, Math.PI*2);
+      targetCtx.fill();
+
+      // Hyperspace streaks (only live)
+      if (hyperStreaks && !exportMode){
+        const px = (s.px / Math.max(1, W)) * w;
+        const py = (s.py / Math.max(1, H)) * h;
+        targetCtx.globalAlpha = Math.min(0.55, 0.14 + s.z*0.35);
+        targetCtx.strokeStyle = `hsla(${s.hue}, 100%, 85%, 0.55)`;
+        targetCtx.lineWidth = 1.0 + s.z * 1.3;
+        targetCtx.beginPath();
+        targetCtx.moveTo(px, py);
+        targetCtx.lineTo(x, y);
+        targetCtx.stroke();
+        targetCtx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function updatePlanets(dt){
+    // very subtle drift/wobble
+    for (const p of planets){
+      p.wob += dt * 0.5;
+      const drift = p.drift * dt * 0.015; // normalized drift amount
+      p.nx += drift;
+      p.ny += Math.sin(p.wob) * dt * 0.0006;
+
+      // wrap
+      if (p.nx < -0.1) p.nx = 1.1;
+      if (p.nx > 1.1) p.nx = -0.1;
+      if (p.ny < -0.1) p.ny = 1.1;
+      if (p.ny > 1.1) p.ny = -0.1;
+    }
+  }
+
+  function renderFrameLive(){
+    time += 0.016;
+
+    // Background fade (trail)
+    ctx.fillStyle = `rgba(0,0,0,${config.trail})`;
+    ctx.fillRect(0,0,W,H);
+
+    // keep background hue by painting with theme bg slightly (prevents gray buildup)
+    const bg = THEMES[config.theme].bg;
+    ctx.fillStyle = bg.replace(")", ",0.0)").startsWith("rgb") ? bg : bg; // safe
+    // subtle vignette + add depth
+    vignette(ctx, W, H);
+
+    // Viz
+    const bass = getBassLevel();
+
+    // Planets behind stars? (looks better behind streaks)
+    updatePlanets(1);
+    for (const p of planets){
+      drawPlanet(ctx, p, W, H);
+    }
+
+    // Stars + hyperspace
+    drawStarsAndEffects(ctx, W, H, 1, bass, false);
+
+    // Meteors
+    if (config.meteors){
+      const spawnChance = (config.mode === "hyper") ? 0.028 : 0.012;
+      if (rng() < spawnChance) meteors.push(spawnMeteor());
+    }
+    for (let i=meteors.length-1;i>=0;i--){
+      const m = meteors[i];
+      const modeMul = (config.mode === "hyper") ? 1.9 : (config.mode === "calm" ? 0.7 : 1.0);
+      m.x += m.vx * modeMul;
+      m.y += m.vy * modeMul;
+      m.life *= 0.985;
+      drawMeteor(ctx, m);
+      if (m.life < 0.08 || m.x < -500 || m.y > H + 500) meteors.splice(i,1);
+    }
+
+    requestAnimationFrame(renderFrameLive);
+  }
+
+  // ---------- Download (PNG / 4K) ----------
+  function snapshotCanvasPNG(is4k){
+    // Build offscreen canvas
+    const out = document.createElement("canvas");
+    const targetW = is4k ? 3840 : Math.max(1200, Math.floor(W * Math.min(2, window.devicePixelRatio || 1)));
+    const targetH = is4k ? 2160 : Math.max(700, Math.floor(H * Math.min(2, window.devicePixelRatio || 1)));
+    out.width = targetW;
+    out.height = targetH;
+    const octx = out.getContext("2d", { alpha:false });
+
+    // Render a clean still frame (no trails)
+    clearBackground(octx, targetW, targetH);
+
+    // Deterministic nebula: use a temporary RNG derived from current seed + theme
+    // So export looks consistent without messing live RNG too much.
+    const seed = getSeedFromURL() ?? 12345;
+    const tempRng = mulberry32((seed ^ hashToSeed(config.theme)) >>> 0);
+    const savedRng = rng;
+    rng = tempRng;
+    drawNebula(octx, targetW, targetH);
+    rng = savedRng;
+
+    // planets
+    for (const p of planets){
+      drawPlanet(octx, p, targetW, targetH);
+    }
+
+    // stars (no motion, no hyperspace streaks on export)
+    drawStarsAndEffects(octx, targetW, targetH, 0, 0, true);
+
+    // subtle vignette
+    vignette(octx, targetW, targetH);
+
+    // Download
+    const a = document.createElement("a");
+    const tag = is4k ? "4k" : "png";
+    a.download = `mek-space-${tag}-seed-${seed}.png`;
+    a.href = out.toDataURL("image/png");
+    a.click();
+  }
+
+  // ---------- Input (Mouse / Touch / Click to add planet) ----------
+  function setMouseFromEvent(e){
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = (e.clientX - rect.left);
+    mouse.y = (e.clientY - rect.top);
+  }
+  window.addEventListener("mousemove", (e) => setMouseFromEvent(e));
+  window.addEventListener("touchstart", (e) => {
+    if (!e.touches[0]) return;
+    setMouseFromEvent(e.touches[0]);
+  }, {passive:true});
+  window.addEventListener("touchmove", (e) => {
+    if (!e.touches[0]) return;
+    setMouseFromEvent(e.touches[0]);
+  }, {passive:true});
+
+  // add planet on click (ignore UI clicks)
+  canvas.addEventListener("click", (e) => {
+    // prevent planet if click was on UI overlay
+    const clickedUI = e.composedPath().some(el => el === ui || el === toggleUIBtn);
+    if (clickedUI) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left);
+    const y = (e.clientY - rect.top);
+
+    planets.push(makePlanet(x, y));
+    if (planets.length > 14) planets.shift(); // keep it clean
+    toast("Gezegen eklendi 🪐");
+  });
+
+  // ---------- UI events ----------
+  toggleUIBtn.addEventListener("click", () => {
+    const hidden = ui.style.display === "none";
+    ui.style.display = hidden ? "block" : "none";
+    toast(hidden ? "UI açıldı" : "UI gizlendi");
+  });
+
+  themeEl.addEventListener("change", () => {
+    setTheme(themeEl.value);
+  });
+
+  modeEl.addEventListener("change", () => {
+    setMode(modeEl.value);
+  });
+
+  densityEl.addEventListener("input", () => {
+    config.density = Number(densityEl.value);
+    rebuildStars();
+  });
+
+  speedEl.addEventListener("input", () => config.speed = Number(speedEl.value));
+  trailEl.addEventListener("input", () => config.trail = Number(trailEl.value));
+  parallaxEl.addEventListener("input", () => {
+    config.parallax = Number(parallaxEl.value);
+    rebuildStars();
+  });
+
+  meteorsEl.addEventListener("change", () => {
+    config.meteors = meteorsEl.checked;
+    toast(config.meteors ? "Meteor açık" : "Meteor kapalı");
+  });
+
+  audioToggleBtn.addEventListener("click", async () => {
+    await toggleAudio();
+  });
+
+  vizToggleEl.addEventListener("change", () => {
+    config.vizOn = vizToggleEl.checked;
+    toast(config.vizOn ? "Visualizer açık" : "Visualizer kapalı");
+  });
+
+  volumeEl.addEventListener("input", () => {
+    config.volume = Number(volumeEl.value);
+    if (audio.master){
+      audio.master.gain.value = config.audioOn ? config.volume : 0;
+    }
+  });
+
+  downloadBtn.addEventListener("click", () => {
+    const is4k = dl4kEl.checked;
+    toast(is4k ? "4K indiriliyor..." : "PNG indiriliyor...");
+    snapshotCanvasPNG(is4k);
+  });
+
+  newSeedBtn.addEventListener("click", () => {
+    setSeed(randomSeed());
+    seedInput.value = seedLabel.textContent;
+    toast("Yeni seed");
+  });
+
+  copyLinkBtn.addEventListener("click", () => copyText(location.href));
+
+  seedInput.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const v = seedInput.value.trim();
+    if (!v) return;
+    const newSeed = (Number.isFinite(Number(v)) && Number(v) >= 0) ? (Number(v) >>> 0) : hashToSeed(v);
+    setSeed(newSeed);
+    toast("Seed uygulandı");
+  });
+
+  // ---------- Keyboard shortcuts ----------
+  window.addEventListener("keydown", async (e) => {
+    const k = e.key.toLowerCase();
+    if (k === "h"){ toggleUIBtn.click(); }
+    if (k === "n"){ setSeed(randomSeed()); seedInput.value = seedLabel.textContent; }
+    if (k === "m"){ config.meteors = !config.meteors; meteorsEl.checked = config.meteors; toast(config.meteors ? "Meteor açık" : "Meteor kapalı"); }
+    if (k === "c"){ copyText(location.href); }
+    if (k === "p"){ snapshotCanvasPNG(false); }
+    if (k === "4"){ snapshotCanvasPNG(true); }
+    if (k === "a"){ await toggleAudio(); }
+    if (k === "v"){ config.vizOn = !config.vizOn; vizToggleEl.checked = config.vizOn; toast(config.vizOn ? "Visualizer açık" : "Visualizer kapalı"); }
+    if (e.key === "Delete"){ clearPlanets(); }
+  });
+
+  // ---------- Init ----------
+  function init(){
+    resize();
+
+    // defaults that look good on most screens
+    config.density = Math.round(Math.min(1400, Math.max(650, (window.innerWidth * window.innerHeight) / 1350)));
+    config.speed = 1.25;
+    config.trail = 0.085;
+    config.parallax = 1.1;
+    config.meteors = true;
+    config.theme = "aurora";
+    config.mode = "normal";
+    config.vizOn = false;
+    config.volume = 0.22;
+
+    applyUI();
+
+    // seed from url or random
+    const urlSeed = getSeedFromURL();
+    const seed = (urlSeed !== null) ? urlSeed : randomSeed();
+    seedInput.value = String(seed);
+    setSeed(seed);
+
+    // initial clear + nebula
+    clearBackground(ctx, W, H);
+    drawNebula(ctx, W, H);
+
+    requestAnimationFrame(renderFrameLive);
+  }
+
+  // apply theme css
+  setCSSAccent(THEMES[config.theme].accent);
+  setCSSBG(THEMES[config.theme].bg);
+
+  init();
+})();
+</script>
+</body>
+</html>
